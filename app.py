@@ -1,5 +1,7 @@
 import streamlit as st
 import sympy as sp
+import matplotlib.pyplot as plt
+import io
 
 # Streamlit Setup
 st.set_page_config(page_title="Mathematischer Ausdrucks-Viewer", layout="centered")
@@ -29,35 +31,42 @@ with st.expander("ℹ️ Beispiele für gültige Eingaben"):
     - `det(Matrix([[a, b], [b, c]]))` → \( \det \begin{bmatrix} a & b \\ b & c \end{bmatrix} \)
     """)
 
-# Eingabefeld
+# Eingabe
 user_input = st.text_area("🧮 Gib deinen mathematischen Ausdruck ein:", value="(a - λ)*(c - λ) - b**2")
 
 # Fehleranfällige Symbole korrigieren
 user_input = user_input.replace("^", "**").replace("ln", "log")
 
-# Definiere erlaubte Symbole (inkl. griechisch)
+# Definiere Symbole (auch griechische)
 a, b, c, d, e, f, g, h, x, y, z, t, n = sp.symbols("a b c d e f g h x y z t n")
 θ, φ, α, β, γ, δ, λ = sp.symbols("θ φ α β γ δ λ")
 
-# Symbolische Verarbeitung
+# Symbolische Auswertung
 if user_input.strip():
     try:
         expr = sp.sympify(user_input)
         simplified = sp.simplify(expr)
 
-        # Anzeige
         st.subheader("📘 Darstellung:")
-        if isinstance(expr, sp.Equality):
-            st.latex(sp.latex(expr.lhs) + " = " + sp.latex(expr.rhs))
-        else:
-            st.latex(sp.latex(expr))
+        st.latex(sp.latex(expr))
 
-        # Vereinfachte Darstellung (optional)
-        st.subheader("📉 Vereinfachter Ausdruck:")
+        st.subheader("📉 Vereinfachte Form:")
         st.latex(sp.latex(simplified))
 
-        # LaTeX-Download
-        st.download_button("⬇️ LaTeX-Datei herunterladen", data=sp.latex(expr), file_name="formel.tex")
+        # Formel als PNG generieren
+        fig, ax = plt.subplots(figsize=(0.01, 0.01))
+        ax.axis("off")
+        tex = f"${sp.latex(expr)}$"
+        fig.text(0.5, 0.5, tex, fontsize=20, ha='center', va='center')
+
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png", bbox_inches="tight", pad_inches=0.3, dpi=300)
+        buf.seek(0)
+
+        st.subheader("🖼️ Vorschau als Bild:")
+        st.image(buf)
+
+        st.download_button("⬇️ Formel als PNG herunterladen", data=buf, file_name="formel.png", mime="image/png")
 
     except Exception as e:
         st.error(f"❌ Fehler beim Verarbeiten des Ausdrucks:\n\n{e}")
